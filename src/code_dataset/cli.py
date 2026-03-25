@@ -412,13 +412,9 @@ def run_cmd(
     """Run the full pipeline: extract → filter → enrich → format."""
     import dspy
 
-    from .enrichment.classifier import classify_records
-    from .enrichment.description_gen import enrich_records
-    from .enrichment.quality_scorer import score_records
     from .extraction.git_extractor import extract_repo
     from .filtering.dedup import deduplicate
     from .filtering.quality_filter import filter_records
-    from .lm.factory import create_lm
 
     cli_overrides = {}
     if combine:
@@ -433,10 +429,16 @@ def run_cmd(
     max_ctx = config.max_context_tokens
     fmt_list = config.output_formats
 
-    # Setup LLM
-    lm = create_lm(config)
-    dspy.configure(lm=lm)
-    console.print(f"[cyan]LLM: {config.llm_provider}/{config.llm_model}[/cyan]")
+    # Setup LLM only if enrichment is enabled
+    needs_llm = config.generate_descriptions or config.classify_type or config.classify_difficulty
+    if needs_llm:
+        from .lm.factory import create_lm
+
+        lm = create_lm(config)
+        dspy.configure(lm=lm)
+        console.print(f"[cyan]LLM: {config.llm_provider}/{config.llm_model}[/cyan]")
+    else:
+        console.print("[dim]LLM enrichment disabled — skipping LLM setup[/dim]")
 
     all_records: list = []
 
@@ -470,6 +472,9 @@ def run_cmd(
         # Stage 3: Enrich
         console.print("[dim]Stage 3: Enriching...[/dim]")
         if config.generate_descriptions:
+            from .enrichment.description_gen import enrich_records
+            from .enrichment.quality_scorer import score_records
+
             good, needs = score_records(records, config.description_quality_threshold)
             if needs:
                 enrich_records(needs, max_calls=config.llm_max_calls, skip_if_enriched=config.skip_if_enriched)
@@ -482,6 +487,8 @@ def run_cmd(
                     r.description_source = "original"
 
         if config.classify_type or config.classify_difficulty:
+            from .enrichment.classifier import classify_records
+
             classify_records(records, max_calls=config.llm_max_calls)
 
         # Detect languages from file extensions for any records missing them

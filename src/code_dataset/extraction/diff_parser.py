@@ -11,9 +11,6 @@ from .models import FileChange
 
 logger = logging.getLogger(__name__)
 
-# Matches @@ -start,count +start,count @@ lines
-_HUNK_HEADER = re.compile(r"^@@\s+-\d+(?:,\d+)?\s+\+\d+(?:,\d+)?\s+@@")
-
 
 def get_diff_text(repo: Repo, commit_a: Commit, commit_b: Commit) -> str:
     """Get the unified diff between two commits.

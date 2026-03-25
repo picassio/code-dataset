@@ -158,7 +158,7 @@ class GoogleOAuthLM(BaseLM):
             "project": project_id,
             "model": self._model_id,
             "request": inner_request,
-            "userAgent": "rlm-dspy",
+            "userAgent": "code-dataset",
             "requestId": f"rlm-{id(self)}-{len(self.history)}",
         }
 

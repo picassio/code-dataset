@@ -105,6 +105,20 @@ _FILENAME_MAP: dict[str, str] = {
     "Jenkinsfile": "groovy",
     "BUILD": "bazel",
     "WORKSPACE": "bazel",
+    "go.mod": "go",
+    "go.sum": "go",
+    "Cargo.toml": "rust",
+    "Cargo.lock": "rust",
+    "build.gradle": "java",
+    "build.gradle.kts": "kotlin",
+    "pom.xml": "java",
+    "package.json": "javascript",
+    "tsconfig.json": "typescript",
+    "pyproject.toml": "python",
+    "setup.py": "python",
+    "requirements.txt": "python",
+    "Pipfile": "python",
+    "composer.json": "php",
 }
 
 

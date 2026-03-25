@@ -52,7 +52,7 @@ def _walk_tree(
 
     for entry in entries:
         if shown >= _MAX_ENTRIES_PER_LEVEL:
-            remaining = len(list(entries)) - shown
+            remaining = len(entries) - shown
             if remaining > 0:
                 lines.append(f"{prefix}... ({remaining} more)")
             break

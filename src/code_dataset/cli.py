@@ -403,10 +403,10 @@ def run_cmd(
     from .filtering.quality_filter import filter_records
     from .lm.factory import create_lm
 
-    config = Config(
-        config_file=config_file,
-        cli_overrides={"output.mode": "combine" if combine else config_file and None},
-    )
+    cli_overrides = {}
+    if combine:
+        cli_overrides["output.mode"] = "combine"
+    config = Config(config_file=config_file, cli_overrides=cli_overrides)
     _setup_logging(config)
 
     repo_list = _resolve_repos(repos, config)
@@ -468,10 +468,10 @@ def run_cmd(
             classify_records(records, max_calls=config.llm_max_calls)
 
         # Detect languages from file extensions for any records missing them
+        from .utils.language_detect import detect_languages
+
         for r in records:
             if not r.languages:
-                from .utils.language_detect import detect_languages
-
                 r.languages = detect_languages(r.file_paths)
 
         if output_mode == "combine":

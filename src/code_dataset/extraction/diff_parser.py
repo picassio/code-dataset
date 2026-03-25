@@ -114,6 +114,32 @@ def _safe_blob_content(blob, max_size_kb: int) -> str | None:
         return None
 
 
+def _parse_numstat_path(raw_path: str) -> list[str]:
+    """Parse a numstat path, handling rename syntax.
+
+    Git numstat outputs renames as: dir/{old.py => new.py}
+    or: old_path => new_path
+
+    Returns:
+        List of possible path strings (both old and new for renames).
+    """
+    # Handle {old => new} syntax: "dir/{old.py => new.py}"
+    rename_match = re.match(r"(.*)?\{(.+?) => (.+?)\}(.*)?", raw_path)
+    if rename_match:
+        prefix = rename_match.group(1) or ""
+        old_name = rename_match.group(2)
+        new_name = rename_match.group(3)
+        suffix = rename_match.group(4) or ""
+        return [f"{prefix}{old_name}{suffix}", f"{prefix}{new_name}{suffix}"]
+
+    # Handle "old => new" syntax
+    if " => " in raw_path:
+        old_path, new_path = raw_path.split(" => ", 1)
+        return [old_path.strip(), new_path.strip()]
+
+    return [raw_path]
+
+
 def _fill_stats(
     repo: Repo,
     commit_a: Commit,
@@ -133,13 +159,14 @@ def _fill_stats(
         parts = line.split("\t")
         if len(parts) != 3:
             continue
-        ins_str, del_str, path = parts
+        ins_str, del_str, raw_path = parts
         try:
             ins = int(ins_str) if ins_str != "-" else 0
             dels = int(del_str) if del_str != "-" else 0
-            stats_by_path[path] = (ins, dels)
         except ValueError:
             continue
+        for path in _parse_numstat_path(raw_path):
+            stats_by_path[path] = (ins, dels)
 
     for fc in changes:
         if fc.path in stats_by_path:

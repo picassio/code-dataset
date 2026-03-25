@@ -1,8 +1,15 @@
 """DPO (Direct Preference Optimization) dataset formatter.
 
 Produces chosen/rejected pairs from merge records. Sources of preference:
-1. Revision within a branch: early incomplete commit vs final merged state
-2. Revert detection: reverted code (rejected) vs replacement (chosen)
+
+1. **Revision within a branch**: For merge commits with multiple branch
+   commits, the early partial diff (first half of commits) serves as
+   "rejected" and the full final diff as "chosen". This represents the
+   natural iteration: incomplete → complete code.
+
+Note: DPO pairs require merge commits with >= 3 branch commits to have
+meaningful revision history. Squash merges (single commit) cannot produce
+DPO pairs because there's no intermediate state available.
 """
 
 from __future__ import annotations
@@ -17,49 +24,54 @@ logger = logging.getLogger(__name__)
 
 
 def _extract_revision_pair(record: MergeRecord) -> dict | None:
-    """Try to create a preference pair from branch revision history.
+    """Create a preference pair from branch revision history.
 
-    If the branch has multiple commits, the first commit's state is "rejected"
-    (incomplete) and the final state is "chosen" (complete, reviewed).
+    Uses the natural code review iteration as signal:
+    - "rejected" = partial diff from the first half of branch commits
+      (typically incomplete, pre-review code)
+    - "chosen" = full final diff (complete, reviewed, merged code)
 
-    Only works for merge commits with >= 3 branch commits (meaningful iteration).
+    Only works for merge commits with >= 3 branch commits.
     """
     if len(record.branch_commits) < 3:
         return None
 
-    # The early commits likely represent incomplete work
-    early_messages = [c.message for c in record.branch_commits[: len(record.branch_commits) // 2]]
-    final_messages = [c.message for c in record.branch_commits[len(record.branch_commits) // 2 :]]
+    midpoint = len(record.branch_commits) // 2
+    early_commits = record.branch_commits[:midpoint]
+    final_commits = record.branch_commits[midpoint:]
 
     instruction = record.title
-    if record.description:
+    if record.description and record.description != record.title:
         instruction = f"{record.title}\n\n{record.description}"
 
     return {
         "id": f"{record.id}/revision",
         "prompt": instruction,
         "chosen": record.diff,
-        "rejected_context": {
-            "early_commit_messages": early_messages,
-            "note": "Early branch state — incomplete implementation before review iterations",
-        },
-        "chosen_context": {
-            "final_commit_messages": final_messages,
-            "note": "Final merged state — complete, reviewed implementation",
+        "rejected": {
+            "commit_messages": [c.message for c in early_commits],
+            "num_commits": len(early_commits),
+            "note": "Partial implementation from early branch commits (pre-review)",
         },
         "metadata": {
             "repo_name": record.repo_name,
             "merge_sha": record.merge_sha,
             "pair_source": "revision_history",
-            "num_commits": len(record.branch_commits),
+            "total_commits": len(record.branch_commits),
+            "early_commits": len(early_commits),
+            "final_commits": len(final_commits),
             "change_type": record.change_type,
             "difficulty": record.difficulty,
+            "languages": record.languages,
         },
     }
 
 
 def format_dpo_records(records: list[MergeRecord]) -> list[dict]:
     """Generate DPO preference pairs from merge records.
+
+    Only merge commits with >= 3 branch commits produce pairs. Squash
+    merges are skipped because they have no intermediate states.
 
     Args:
         records: Enriched merge records.
@@ -73,7 +85,6 @@ def format_dpo_records(records: list[MergeRecord]) -> list[dict]:
         if not record.title:
             continue
 
-        # Try revision-based pairs
         pair = _extract_revision_pair(record)
         if pair:
             pairs.append(pair)

@@ -77,6 +77,7 @@ def score_records(
             if score >= threshold and is_instructive:
                 record.description_source = "original"
                 record.description = record.merge_message
+                record.title = record.merge_message.strip().split("\n")[0]
                 good.append(record)
                 logger.debug("Good description (%.2f): %s — %s", score, record.id, reason)
             else:

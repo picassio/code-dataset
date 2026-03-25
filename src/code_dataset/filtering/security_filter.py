@@ -13,11 +13,12 @@ logger = logging.getLogger(__name__)
 
 # Compiled regex patterns for common secret formats
 _SECRET_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    # API keys
-    (re.compile(r"sk-[a-zA-Z0-9]{20,}"), "[REDACTED_OPENAI_KEY]"),
+    # API keys — order matters: more specific patterns first
     (re.compile(r"sk-ant-api[a-zA-Z0-9-]{20,}"), "[REDACTED_ANTHROPIC_KEY]"),
     (re.compile(r"sk-ant-oat[a-zA-Z0-9-]{20,}"), "[REDACTED_ANTHROPIC_OAUTH]"),
     (re.compile(r"sk-or-v1-[a-zA-Z0-9]{20,}"), "[REDACTED_OPENROUTER]"),
+    (re.compile(r"sk-proj-[a-zA-Z0-9_-]{20,}"), "[REDACTED_OPENAI_KEY]"),
+    (re.compile(r"sk-[a-zA-Z0-9]{20,}"), "[REDACTED_OPENAI_KEY]"),
     (re.compile(r"gsk_[a-zA-Z0-9]{20,}"), "[REDACTED_GROQ]"),
     (re.compile(r"AIza[a-zA-Z0-9_-]{35}"), "[REDACTED_GOOGLE_KEY]"),
     (re.compile(r"ghp_[a-zA-Z0-9]{36}"), "[REDACTED_GITHUB_PAT]"),

@@ -26,9 +26,15 @@ def format_sft_record(record: MergeRecord, max_context_tokens: int = 8192) -> di
     Returns:
         Dict in SFT format.
     """
-    instruction = record.title
-    if record.description:
-        instruction = f"{record.title}\n\n{record.description}"
+    title = record.title or record.merge_message.strip().split("\n")[0]
+    description = record.description or ""
+
+    if title and description and description != title:
+        instruction = f"{title}\n\n{description}"
+    elif description:
+        instruction = description
+    else:
+        instruction = title
 
     context_files = build_context(record, max_context_tokens)
     response_files = build_response_files(record)

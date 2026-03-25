@@ -40,6 +40,17 @@ app.add_typer(config_app)
 console = Console()
 
 
+def _validate_input_file(path: Path) -> None:
+    """Validate that an input file exists and is readable."""
+    if not path.exists():
+        console.print(f"[red]Input file not found: {path}[/red]")
+        console.print("[dim]Run the previous pipeline stage first, or specify a different file.[/dim]")
+        raise typer.Exit(1)
+    if not path.is_file():
+        console.print(f"[red]Not a file: {path}[/red]")
+        raise typer.Exit(1)
+
+
 def _setup_logging(config: Config) -> None:
     """Configure logging from config settings."""
     level = getattr(logging, config.log_level.upper(), logging.INFO)
@@ -243,6 +254,8 @@ def filter_cmd(
     config_file: Annotated[Optional[Path], typer.Option("--config", "-c", help="Config file")] = None,
 ) -> None:
     """Stage 2: Filter merge records (remove bots, trivial changes, secrets)."""
+    _validate_input_file(input_file)
+
     from .extraction.git_extractor import read_records, write_records
     from .filtering.dedup import deduplicate
     from .filtering.quality_filter import filter_records
@@ -274,6 +287,8 @@ def enrich_cmd(
     config_file: Annotated[Optional[Path], typer.Option("--config", "-c", help="Config file")] = None,
 ) -> None:
     """Stage 3: Enrich records with LLM-generated descriptions (uses DSPy)."""
+    _validate_input_file(input_file)
+
     import dspy
 
     from .enrichment.classifier import classify_records
@@ -342,6 +357,8 @@ def format_cmd(
     config_file: Annotated[Optional[Path], typer.Option("--config", "-c", help="Config file")] = None,
 ) -> None:
     """Stage 4: Format enriched records into training datasets."""
+    _validate_input_file(input_file)
+
     from .extraction.git_extractor import read_records
     from .formatting.dpo_formatter import write_dpo_dataset
     from .formatting.rl_formatter import write_rl_dataset

@@ -318,6 +318,13 @@ def enrich_cmd(
         console.print("[dim]Classifying change types and difficulty...[/dim]")
         classify_records(records, max_calls=config.llm_max_calls)
 
+    # Detect languages from file extensions for any records missing them
+    from .utils.language_detect import detect_languages
+
+    for r in records:
+        if not r.languages:
+            r.languages = detect_languages(r.file_paths)
+
     write_records(records, output)
     console.print(f"[green]✓ Enriched {len(records)} records → {output}[/green]")
 
@@ -418,7 +425,7 @@ def run_cmd(
 
     for repo_info in repo_list:
         repo_path = repo_info.get("path", repo_info) if isinstance(repo_info, dict) else repo_info
-        repo_name = repo_info.get("name") if isinstance(repo_info, dict) else Path(repo_path).name
+        repo_name = (repo_info.get("name") if isinstance(repo_info, dict) else None) or Path(repo_path).name
         main_branch = branch or (repo_info.get("main_branch", "main") if isinstance(repo_info, dict) else "main")
 
         console.print(f"\n[bold cyan]═══ {repo_name} ═══[/bold cyan]")
@@ -459,6 +466,13 @@ def run_cmd(
 
         if config.classify_type or config.classify_difficulty:
             classify_records(records, max_calls=config.llm_max_calls)
+
+        # Detect languages from file extensions for any records missing them
+        for r in records:
+            if not r.languages:
+                from .utils.language_detect import detect_languages
+
+                r.languages = detect_languages(r.file_paths)
 
         if output_mode == "combine":
             all_records.extend(records)
@@ -515,7 +529,24 @@ def stats_cmd(
     if p.suffix == ".jsonl":
         from .extraction.git_extractor import read_records
 
-        records = read_records(p)
+        try:
+            records = read_records(p)
+        except (KeyError, TypeError):
+            # Formatted dataset (SFT/DPO/RL), not raw MergeRecords
+            import json as _json
+            from collections import Counter
+
+            with open(p) as f:
+                data = [_json.loads(line) for line in f if line.strip()]
+            console.print(f"[cyan]{p.name}: {len(data)} entries[/cyan]")
+            if data:
+                console.print(f"Keys: {list(data[0].keys())}")
+                if "metadata" in data[0]:
+                    types = Counter(d["metadata"].get("change_type", "") for d in data if "metadata" in d)
+                    diffs = Counter(d["metadata"].get("difficulty", "") for d in data if "metadata" in d)
+                    console.print(f"Change types: {dict(types)}")
+                    console.print(f"Difficulty: {dict(diffs)}")
+            return
     elif (p / ".git").exists():
         from .extraction.git_extractor import extract_repo
 

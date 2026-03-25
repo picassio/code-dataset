@@ -11,6 +11,7 @@ import logging
 import dspy
 
 from ..extraction.models import MergeRecord
+from ..utils.language_detect import detect_languages
 from .description_gen import _normalize_change_type, _normalize_difficulty, _truncate_diff
 from .signatures import DiffClassifier
 
@@ -38,6 +39,10 @@ def classify_record(record: MergeRecord) -> MergeRecord:
 
     if not record.title:
         record.title = str(result.summary).strip()
+
+    # Always detect languages from file extensions (free, no LLM)
+    if not record.languages:
+        record.languages = detect_languages(record.file_paths)
 
     return record
 

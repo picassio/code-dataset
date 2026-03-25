@@ -1,0 +1,110 @@
+# =============================================================================
+# Code Dataset Configuration
+# =============================================================================
+# Copy this file to config.yaml and adjust as needed.
+# Secrets go in .env file, not here.
+# Priority: CLI flags > env vars > ./config.yaml > ~/.code-dataset/config.yaml > defaults
+
+# =============================================================================
+# Repositories
+# =============================================================================
+repos:
+  - path: /path/to/your/repo
+    name: my-project           # optional, defaults to folder name
+    main_branch: main          # optional, defaults to "main"
+  # - path: /path/to/another/repo
+  #   name: another-project
+  #   main_branch: master
+
+# Single repo shorthand (alternative to repos list):
+# repo: /path/to/your/repo
+
+# =============================================================================
+# LLM Provider Settings
+# =============================================================================
+llm:
+  provider: anthropic          # anthropic | google | openai
+  model: claude-sonnet-4-20250514
+  temperature: 0.3
+  max_tokens: 4096
+  num_retries: 3
+  max_concurrent: 5
+  max_calls: 500               # max LLM calls per run (cost control)
+
+# =============================================================================
+# Git Extraction
+# =============================================================================
+extraction:
+  merge_strategy: auto         # auto | merge_commit | squash | all
+  min_diff_lines: 5
+  max_diff_lines: 5000
+  include_file_contents: true
+  max_file_size_kb: 100
+  # since: "2024-01-01"       # optional date range filter
+  # until: "2025-01-01"
+
+# =============================================================================
+# Filtering
+# =============================================================================
+filtering:
+  exclude_authors:
+    - "dependabot[bot]"
+    - "renovate[bot]"
+    - "github-actions[bot]"
+    - "semantic-release-bot"
+  exclude_paths:
+    - "*.lock"
+    - "package-lock.json"
+    - "yarn.lock"
+    - "pnpm-lock.yaml"
+    - "*.min.js"
+    - "*.min.css"
+    - "vendor/"
+    - "node_modules/"
+    - "dist/"
+  exclude_extensions:
+    - ".svg"
+    - ".png"
+    - ".jpg"
+    - ".gif"
+    - ".ico"
+    - ".woff"
+    - ".woff2"
+    - ".ttf"
+    - ".pdf"
+    - ".zip"
+  min_commit_message_length: 10
+  remove_secrets: true
+  dedup: true
+
+# =============================================================================
+# Enrichment (LLM-based)
+# =============================================================================
+enrichment:
+  generate_descriptions: true
+  description_quality_threshold: 0.5
+  classify_type: true
+  classify_difficulty: true
+  skip_if_enriched: true
+
+# =============================================================================
+# Output
+# =============================================================================
+output:
+  dir: ./output
+  mode: separate               # separate (per-repo) | combine (merged)
+  formats:
+    - sft
+    - dpo
+    - rl
+  max_context_tokens: 8192
+  include_repo_tree: true
+
+# =============================================================================
+# Logging
+# =============================================================================
+logging:
+  level: INFO
+  progress: true
+  verbose: false
+  # file: ./code-dataset.log

@@ -29,7 +29,8 @@ def format_sft_record(record: MergeRecord, max_context_tokens: int = 8192) -> di
     title = record.title or record.merge_message.strip().split("\n")[0]
     description = record.description or ""
 
-    if title and description and description != title:
+    # Avoid duplicating the title when it's already the first line of the description
+    if title and description and not description.startswith(title):
         instruction = f"{title}\n\n{description}"
     elif description:
         instruction = description

@@ -234,7 +234,11 @@ def extract_cmd(
         main_branch = branch or (repo_info.get("main_branch", "main") if isinstance(repo_info, dict) else "main")
 
         console.print(f"[cyan]Extracting from {repo_path}...[/cyan]")
-        records = extract_repo(repo_path, repo_name=repo_name, main_branch=main_branch, config=config)
+        try:
+            records = extract_repo(repo_path, repo_name=repo_name, main_branch=main_branch, config=config)
+        except ValueError as e:
+            console.print(f"[red]Error: {e}[/red]")
+            raise typer.Exit(1)
         all_records.extend(records)
         console.print(f"  Found {len(records)} merge records")
 
@@ -451,7 +455,11 @@ def run_cmd(
 
         # Stage 1: Extract
         console.print("[dim]Stage 1: Extracting...[/dim]")
-        records = extract_repo(repo_path, repo_name=repo_name, main_branch=main_branch, config=config)
+        try:
+            records = extract_repo(repo_path, repo_name=repo_name, main_branch=main_branch, config=config)
+        except ValueError as e:
+            console.print(f"  [red]Error: {e}[/red]")
+            continue
         console.print(f"  Extracted {len(records)} merge records")
 
         if not records:
@@ -604,7 +612,11 @@ def preview_cmd(
     _setup_logging(config)
 
     main_branch = branch or "main"
-    records = extract_repo(repo_path, main_branch=main_branch, config=config)
+    try:
+        records = extract_repo(repo_path, main_branch=main_branch, config=config)
+    except ValueError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
 
     console.print(f"\n[cyan]Found {len(records)} merge records. Showing first {min(n, len(records))}:[/cyan]\n")
 
